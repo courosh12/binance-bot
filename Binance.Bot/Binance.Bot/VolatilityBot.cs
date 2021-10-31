@@ -19,6 +19,7 @@ namespace Binance.Bot
         private RollingStack<IBinanceStreamKline> _stack;
         private decimal _currentPrice;
         private DateTime _dontTradeTill;
+        private object _lock = new object();
 
         public VolatilityBot(BinanceSocketClient socketClient, BinanceClient client, 
             ILogger<VolatilityBot> logger, BotSetting botSetting)
@@ -77,32 +78,43 @@ namespace Binance.Bot
             {
                 ExceCuteOrder(OrderSide.Sell);
             }
-            
-            
         }
 
-        private async void ExceCuteOrder(OrderSide type)
+        private void ExceCuteOrder(OrderSide type)
         {
-            var quantity = type ==  OrderSide.Buy
-                ? _botSetting.QuantityInDollar
-                : ( _botSetting.QuantityInDollar/_currentPrice);
+            lock (_lock)
+            {
+                if (_dontTradeTill != null && _dontTradeTill > DateTime.Now)
+                {
+                    return;
+                }
+                
+                var quantity = type ==  OrderSide.Buy
+                    ? _botSetting.QuantityInDollar
+                    : ( _botSetting.QuantityInDollar/_currentPrice);
             
-            //TODO find out what the precision is for orders
-            quantity = decimal.Round(quantity, 5);
+                //TODO find out what the precision is for orders
+                //quantity = decimal.Round(quantity, 5);
             
-            var callResult = await _client.Spot.Order.PlaceOrderAsync
-                (_botSetting.Symbol, type, OrderType.Market, quantity: quantity);
+                var callResult = _client.Spot.Order.PlaceOrderAsync
+                    (_botSetting.Symbol, type, OrderType.Market, quantity: quantity).GetAwaiter().GetResult();
 
-            if(callResult.Success)
-            {
-                var actualData=callResult.Data;
-                _logger.LogInformation($"Bought: {actualData.Quantity} of {actualData.Symbol} at {actualData.Price} price");
-                _dontTradeTill = DateTime.Now.AddMinutes(_botSetting.TimeSpan);
-                _logger.LogInformation($"Cant trade till {_dontTradeTill}");
-            }
-            else
-            {
-                _logger.LogError(callResult.Error.ToString());
+                if(callResult.Success)
+                {
+                    var actualData=callResult.Data;
+                    _logger.LogInformation($"{(type == OrderSide.Buy?"Bought":"Sold")}: {actualData.Quantity} of {actualData.Symbol} at {actualData.Price} price");
+                    _dontTradeTill = DateTime.Now.AddMinutes(_botSetting.TimeSpan);
+                    _logger.LogInformation($"Cant trade till {_dontTradeTill}");
+                }
+                else
+                {
+                    _logger.LogError(callResult.Error.ToString());
+                    if (callResult.Error.Code == -2010)
+                    {
+                        _dontTradeTill = DateTime.Now.AddMinutes(_botSetting.TimeSpan);
+                        _logger.LogInformation($"Cant trade till {_dontTradeTill}");
+                    }
+                }   
             }
         }
 

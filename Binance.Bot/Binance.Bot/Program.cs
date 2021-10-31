@@ -1,30 +1,36 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Binance.Net;
+using Binance.Net.Enums;
 using Binance.Net.Objects;
 using CryptoExchange.Net.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Serilog;
+using Serilog.AspNetCore;
 using Serilog.Events;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Binance.Bot
 {
     
     class Program
     {
+        private static IConfiguration _configuration;
         static async Task Main(string[] args)
         {
-            var configuration = new ConfigurationBuilder()
+            _configuration =  new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json")
-                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", true)
+                .AddEnvironmentVariables()
                 .Build();
 
             Log.Logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(configuration)
+                .ReadFrom.Configuration(_configuration)
                 .CreateLogger();
 
             try
@@ -61,14 +67,20 @@ namespace Binance.Bot
         {
             var socketClient = new BinanceSocketClient(new BinanceSocketClientOptions()
             {
+                
+                LogLevel = LogLevel.Information,
+                LogWriters = new List<ILogger> { new SerilogLoggerFactory(Log.Logger).CreateLogger<Program>() },
                 // Specify options for the client
             });
-            
+                
+            var settings = _configuration.GetSection("ApiKeys");
+
             var client = new BinanceClient(new BinanceClientOptions(){
                 // Specify options for the client
-                 BaseAddress = "https://testnet.binance.vision",
-                ApiCredentials = new ApiCredentials("JUV9CtM1On6hnDBhdD5B31epV2vnYVP5oletXMGPojbzz0uTzzXGMQpj4pgmyawm", 
-                    "M4wTQ1q7h021drW5oZvluX0Ci2yd5TfROeMnmwjzAupPHW3kU4tuNGOP1uW7rjE1")
+                TradeRulesBehaviour = TradeRulesBehaviour.AutoComply,
+                LogWriters = new List<ILogger> { new SerilogLoggerFactory(Log.Logger).CreateLogger<Program>() },
+                ApiCredentials = new ApiCredentials(settings.GetSection("Key").Value, 
+                    settings.GetSection("Secret").Value)
             });
             
             serviceCollection.AddSingleton(socketClient);
