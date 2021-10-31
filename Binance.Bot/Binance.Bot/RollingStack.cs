@@ -5,9 +5,9 @@ namespace Binance.Bot
         private T[] _stack;
         private int _size;
         
-        public RollingStack()
+        public RollingStack(int size)
         {
-            _size = 60;
+            _size = size;
             _stack = new T[_size];
         }
 

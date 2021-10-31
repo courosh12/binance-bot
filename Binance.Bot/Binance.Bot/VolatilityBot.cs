@@ -20,6 +20,7 @@ namespace Binance.Bot
         private decimal _currentPrice;
         private DateTime _dontTradeTill;
         private object _lock = new object();
+        private Trades _trades;
 
         public VolatilityBot(BinanceSocketClient socketClient, BinanceClient client, 
             ILogger<VolatilityBot> logger, BotSetting botSetting)
@@ -28,7 +29,8 @@ namespace Binance.Bot
             _client = client;
             _logger = logger;
             _botSetting = botSetting;
-            _stack = new RollingStack<IBinanceStreamKline>();
+            _stack = new RollingStack<IBinanceStreamKline>(_botSetting.TimeSpan);
+            _trades = new Trades();
             _logger.LogInformation($"Starting: {this.GetType().Name} on Pair {_botSetting.Symbol} " +
                                    $"setting: Timespan: {botSetting.TimeSpan} ChangeInPrice: {botSetting.ChangeInPrice}");
         }
@@ -92,16 +94,19 @@ namespace Binance.Bot
                 var quantity = type ==  OrderSide.Buy
                     ? _botSetting.QuantityInDollar
                     : ( _botSetting.QuantityInDollar/_currentPrice);
-            
-                //TODO find out what the precision is for orders
-                //quantity = decimal.Round(quantity, 5);
-            
+
                 var callResult = _client.Spot.Order.PlaceOrderAsync
                     (_botSetting.Symbol, type, OrderType.Market, quantity: quantity).GetAwaiter().GetResult();
 
                 if(callResult.Success)
                 {
                     var actualData=callResult.Data;
+                    
+                    if(type == OrderSide.Buy)
+                        _trades.AddBuy(actualData.Price);
+                    else if(type==OrderSide.Sell)
+                        _trades.AddSell(actualData.Price);
+                    
                     _logger.LogInformation($"{(type == OrderSide.Buy?"Bought":"Sold")}: {actualData.Quantity} of {actualData.Symbol} at {actualData.Price} price");
                     _dontTradeTill = DateTime.Now.AddMinutes(_botSetting.TimeSpan);
                     _logger.LogInformation($"Cant trade till {_dontTradeTill}");
@@ -114,8 +119,15 @@ namespace Binance.Bot
                         _dontTradeTill = DateTime.Now.AddMinutes(_botSetting.TimeSpan);
                         _logger.LogInformation($"Cant trade till {_dontTradeTill}");
                     }
-                }   
+                }
+
+                ShowAverageBuySell();
             }
+        }
+
+        private void ShowAverageBuySell()
+        {
+            _logger.LogInformation($"Symbol: {_botSetting.Symbol} Average buy: {_trades.BuyAverage} average sell: {_trades.SellAverage} ");
         }
 
         private Action CheckpriceDifference(decimal price)

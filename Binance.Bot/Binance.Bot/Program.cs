@@ -61,6 +61,7 @@ namespace Binance.Bot
                 {
                     configHost.SetBasePath(Directory.GetCurrentDirectory());
                     configHost.AddJsonFile("appsettings.json", optional: false);
+                    configHost.AddEnvironmentVariables();
                 });
 
         public static void ConfigureService(IServiceCollection serviceCollection)
