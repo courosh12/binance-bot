@@ -17,10 +17,14 @@ namespace Binance.Bot
     {
         static async Task Main(string[] args)
         {
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json")
+                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", true)
+                .Build();
+
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-                .Enrich.FromLogContext()
-                .WriteTo.Console()
+                .ReadFrom.Configuration(configuration)
                 .CreateLogger();
 
             try
@@ -62,6 +66,7 @@ namespace Binance.Bot
             
             var client = new BinanceClient(new BinanceClientOptions(){
                 // Specify options for the client
+                 BaseAddress = "https://testnet.binance.vision",
                 ApiCredentials = new ApiCredentials("JUV9CtM1On6hnDBhdD5B31epV2vnYVP5oletXMGPojbzz0uTzzXGMQpj4pgmyawm", 
                     "M4wTQ1q7h021drW5oZvluX0Ci2yd5TfROeMnmwjzAupPHW3kU4tuNGOP1uW7rjE1")
             });
@@ -72,8 +77,5 @@ namespace Binance.Bot
             serviceCollection.AddTransient<VolatilityBot,VolatilityBot>();
             
         }
-
-
-
     }
 }

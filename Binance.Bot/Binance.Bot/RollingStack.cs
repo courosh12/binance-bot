@@ -26,7 +26,11 @@ namespace Binance.Bot
 
         public T LookUp(int steps)
         {
-            return _stack[steps-1];
+            var value = _stack[steps - 1];
+            if (value == null)
+                return default(T);
+            else
+                return _stack[steps-1];
         }
     }
 }

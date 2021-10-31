@@ -17,6 +17,8 @@ namespace Binance.Bot
         private  ILogger<VolatilityBot> _logger;
         private BotSetting _botSetting;
         private RollingStack<IBinanceStreamKline> _stack;
+        private decimal _currentPrice;
+        private DateTime _dontTradeTill;
 
         public VolatilityBot(BinanceSocketClient socketClient, BinanceClient client, 
             ILogger<VolatilityBot> logger, BotSetting botSetting)
@@ -26,28 +28,103 @@ namespace Binance.Bot
             _logger = logger;
             _botSetting = botSetting;
             _stack = new RollingStack<IBinanceStreamKline>();
+            _logger.LogInformation($"Starting: {this.GetType().Name} on Pair {_botSetting.Symbol} " +
+                                   $"setting: Timespan: {botSetting.TimeSpan} ChangeInPrice: {botSetting.ChangeInPrice}");
         }
 
         public void SubscribeToData()
         {
-            //should stop by gc??
-            var subscribeResult = _socketClient.Spot.SubscribeToKlineUpdatesAsync(_botSetting.Symbol,KlineInterval.OneMinute, OnUpdate);
+            var subscribeResult = _socketClient.Spot.SubscribeToKlineUpdatesAsync(_botSetting.Symbol,KlineInterval.OneMinute, OnKlineUpdate);
             
             if (!subscribeResult.Result.Success)
             {
                 _logger.LogError(subscribeResult.Result.Error.Message);
             }
+            
+            var subscribeResultPrice = _socketClient.Spot.SubscribeToTradeUpdatesAsync(_botSetting.Symbol, OnTradeUpdate);
+            
+            if (!subscribeResultPrice.Result.Success)
+            {
+                _logger.LogError(subscribeResultPrice.Result.Error.Message);
+            }
         }
 
-        private void OnUpdate(DataEvent<IBinanceStreamKlineData> data)
+        private void OnKlineUpdate(DataEvent<IBinanceStreamKlineData> data)
         {
             var actualData = data.Data.Data;
             if (actualData.Final)
             {
                 _stack.Push(actualData);
-                _logger.LogInformation(actualData.Close.ToString());   
+                _logger.LogDebug(actualData.Close.ToString());
             }
         }
 
+        private void OnTradeUpdate(DataEvent<BinanceStreamTrade> trade)
+        {
+            if (_dontTradeTill != null && _dontTradeTill > DateTime.Now)
+            {
+                return;
+            }
+            
+            _currentPrice = trade.Data.Price;
+            var action = CheckpriceDifference(_currentPrice);
+            
+            if(action==Action.Buy)
+            {
+                ExceCuteOrder(OrderSide.Buy);    
+            }
+            else if (action == Action.Sell)
+            {
+                ExceCuteOrder(OrderSide.Sell);
+            }
+            
+            
+        }
+
+        private async void ExceCuteOrder(OrderSide type)
+        {
+            var quantity = type ==  OrderSide.Buy
+                ? _botSetting.QuantityInDollar
+                : ( _botSetting.QuantityInDollar/_currentPrice);
+            
+            //TODO find out what the precision is for orders
+            quantity = decimal.Round(quantity, 5);
+            
+            var callResult = await _client.Spot.Order.PlaceOrderAsync
+                (_botSetting.Symbol, type, OrderType.Market, quantity: quantity);
+
+            if(callResult.Success)
+            {
+                var actualData=callResult.Data;
+                _logger.LogInformation($"Bought: {actualData.Quantity} of {actualData.Symbol} at {actualData.Price} price");
+                _dontTradeTill = DateTime.Now.AddMinutes(_botSetting.TimeSpan);
+                _logger.LogInformation($"Cant trade till {_dontTradeTill}");
+            }
+            else
+            {
+                _logger.LogError(callResult.Error.ToString());
+            }
+        }
+
+        private Action CheckpriceDifference(decimal price)
+        {
+            if (_stack.LookUp(_botSetting.TimeSpan) == null)
+                return Action.None;
+            
+            var prevPrice = _stack.LookUp(_botSetting.TimeSpan).Close;
+            var priceChange = ((price - prevPrice) / prevPrice) * 100;
+
+            if (Math.Abs(priceChange) > _botSetting.ChangeInPrice)
+            {
+                _logger.LogInformation($"Price Change: {prevPrice} > {price} percentage: {priceChange}");
+
+                if (priceChange > 0)
+                    return Action.Sell;
+                else
+                    return Action.Buy;
+            }
+
+            return Action.None;
+        }
     }
 }
