@@ -38,7 +38,7 @@ namespace Binance.Bot
                     new VolatilityBot(_service.GetService<BinanceSocketClient>(),
                     _service.GetService<BinanceClient>(),
                     _service.GetService<ILogger<VolatilityBot>>(),
-                    setting)
+                    setting,PrintAllTraddeInfo)
                 );
             }
 
@@ -48,6 +48,14 @@ namespace Binance.Bot
             }
             
             return Task.CompletedTask;
+        }
+
+        private void PrintAllTraddeInfo()
+        {
+            foreach (var bot in _bots)
+            {
+                bot.ShowAverageBuySell();
+            }
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
