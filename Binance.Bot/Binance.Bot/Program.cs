@@ -78,6 +78,7 @@ namespace Binance.Bot
 
             var client = new BinanceClient(new BinanceClientOptions(){
                 // Specify options for the client
+                AutoTimestamp = true,
                 TradeRulesBehaviour = TradeRulesBehaviour.AutoComply,
                 LogWriters = new List<ILogger> { new SerilogLoggerFactory(Log.Logger).CreateLogger<Program>() },
                 ApiCredentials = new ApiCredentials(settings.GetSection("Key").Value, 
