@@ -1,0 +1,19 @@
+[Unit]
+Description=Binance bot
+
+[Service]
+WorkingDirectory=/service
+ExecStart=/usr/bin/dotnet /service/Binance.Bot.dll
+Restart=always
+RestartSec=60
+KillSignal=SIGINT
+SyslogIdentifier=log.bot
+User=root
+Environment=ApiKeys__Key=
+Environment=ApiKeys__Secret=
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
+
+
