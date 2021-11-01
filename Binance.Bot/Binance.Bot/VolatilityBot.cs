@@ -93,9 +93,7 @@ namespace Binance.Bot
                     return;
                 }
                 
-                var quantity = type ==  OrderSide.Buy
-                    ? _botSetting.QuantityInDollar
-                    : ( _botSetting.QuantityInDollar/_currentPrice);
+                var quantity = _botSetting.QuantityInDollar/_currentPrice;
 
                 var callResult = _client.Spot.Order.PlaceOrderAsync
                     (_botSetting.Symbol, type, OrderType.Market, quantity: quantity).GetAwaiter().GetResult();
