@@ -1,6 +1,6 @@
 namespace Binance.Bot
 {
-    public enum ActionAdvice
+    public enum TypeOfTrade
     {
         Buy,
         Sell,

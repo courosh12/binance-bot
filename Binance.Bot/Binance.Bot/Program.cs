@@ -2,14 +2,17 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Binance.Bot.Data;
 using Binance.Net;
 using Binance.Net.Enums;
 using Binance.Net.Objects;
 using CryptoExchange.Net.Authentication;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.AspNetCore;
 using Serilog.Events;
@@ -87,7 +90,12 @@ namespace Binance.Bot
             
             serviceCollection.AddSingleton(socketClient);
             serviceCollection.AddSingleton(client);
-
+            serviceCollection.AddDbContextFactory<TradeContext>(options =>
+            {
+                options.UseSqlite(_configuration.GetConnectionString("DefaultConnection"));
+            });
+            
+            serviceCollection.AddTransient<TradesService>();
             serviceCollection.AddTransient<VolatilityBot,VolatilityBot>();
             
         }

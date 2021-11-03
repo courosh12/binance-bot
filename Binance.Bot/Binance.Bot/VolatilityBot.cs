@@ -1,10 +1,12 @@
 using System;
+using Binance.Bot.Data;
 using Binance.Net;
 using Binance.Net.Enums;
 using Binance.Net.Interfaces;
 using Binance.Net.Objects.Spot.MarketStream;
 using CryptoExchange.Net;
 using CryptoExchange.Net.Sockets;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ILogger = Serilog.ILogger;
 
@@ -20,11 +22,11 @@ namespace Binance.Bot
         private decimal _currentPrice;
         private DateTime _dontTradeTill;
         private object _lock = new object();
-        private Trades _trades;
+        private TradesService _tradesService;
         private Action _newTradeCallback;
 
         public VolatilityBot(BinanceSocketClient socketClient, BinanceClient client, 
-            ILogger<VolatilityBot> logger, BotSetting botSetting, Action tradeCallback)
+            ILogger<VolatilityBot> logger, BotSetting botSetting, Action tradeCallback,TradesService tradesService)
         {
             _socketClient = socketClient;
             _client = client;
@@ -32,7 +34,9 @@ namespace Binance.Bot
             _botSetting = botSetting;
             _newTradeCallback = tradeCallback;
             _stack = new RollingStack<IBinanceStreamKline>(_botSetting.TimeSpan);
-            _trades = new Trades();
+            _tradesService = tradesService;
+            _tradesService.BotSetting = _botSetting;
+            _tradesService.SetId();
             _logger.LogInformation($"Starting: {this.GetType().Name} on Pair {_botSetting.Symbol} " +
                                    $"setting: Timespan: {botSetting.TimeSpan} ChangeInPrice: {botSetting.ChangeInPrice}");
         }
@@ -74,11 +78,11 @@ namespace Binance.Bot
             _currentPrice = trade.Data.Price;
             var action = CheckpriceDifference(_currentPrice);
             
-            if(action==ActionAdvice.Buy)
+            if(action==TypeOfTrade.Buy)
             {
                 ExceCuteOrder(OrderSide.Buy);    
             }
-            else if (action == ActionAdvice.Sell)
+            else if (action == TypeOfTrade.Sell)
             {
                 ExceCuteOrder(OrderSide.Sell);
             }
@@ -103,9 +107,9 @@ namespace Binance.Bot
                     var actualData=callResult.Data;
                     
                     if(type == OrderSide.Buy)
-                        _trades.AddBuy(actualData.Price);
+                        _tradesService.AddTrade(actualData.Price,decimal.Round(actualData.Quantity*actualData.Price,2),TypeOfTrade.Buy);
                     else if(type==OrderSide.Sell)
-                        _trades.AddSell(actualData.Price);
+                        _tradesService.AddTrade(actualData.Price,decimal.Round(actualData.Quantity*actualData.Price,2),TypeOfTrade.Sell);
                     
                     _logger.LogInformation($"{(type == OrderSide.Buy?"Bought":"Sold")}: {actualData.Quantity} of {actualData.Symbol} at {actualData.Price} price");
                     _dontTradeTill = DateTime.Now.AddMinutes(_botSetting.TimeSpan);
@@ -126,14 +130,19 @@ namespace Binance.Bot
         
         public void ShowAverageBuySell()
         {
-            _logger.LogInformation($"Symbol: {_botSetting.Symbol} Average buy: {_trades.BuyAverage} trades: {_trades.TotalTradesBuy} " +
-                                   $"average sell: {_trades.SellAverage} trades: {_trades.TotalTradesSell} ");
+            var buyRapport = _tradesService.GetTradeRapport(TypeOfTrade.Buy);
+            var sellRapport=_tradesService.GetTradeRapport(TypeOfTrade.Sell);;
+            _logger.LogInformation(
+                 $"Symbol: {_botSetting.Symbol}" +
+                        $" average buy: {buyRapport.AveragePrice} trades: {buyRapport.TotalTrades} amount: {buyRapport.SumQauntity} " +
+                        $" average sell: {sellRapport.AveragePrice} trades: {sellRapport.TotalTrades} amount: {sellRapport.SumQauntity} " +
+                        $"diff: {decimal.Round(buyRapport.AveragePrice>0?(sellRapport.AveragePrice-buyRapport.AveragePrice)/buyRapport.AveragePrice*100:0,2)} ");
         }
 
-        private ActionAdvice CheckpriceDifference(decimal price)
+        private TypeOfTrade CheckpriceDifference(decimal price)
         {
             if (_stack.LookUp(_botSetting.TimeSpan) == null)
-                return ActionAdvice.None;
+                return TypeOfTrade.None;
             
             var prevPrice = _stack.LookUp(_botSetting.TimeSpan).Close;
             var priceChange = ((price - prevPrice) / prevPrice) * 100;
@@ -144,12 +153,12 @@ namespace Binance.Bot
                 _logger.LogInformation($"Price Change: {prevPrice} > {price} percentage: {priceChange}");
 
                 if (priceChange > 0)
-                    return ActionAdvice.Sell;
+                    return TypeOfTrade.Sell;
                 else
-                    return ActionAdvice.Buy;
+                    return TypeOfTrade.Buy;
             }
 
-            return ActionAdvice.None;
+            return TypeOfTrade.None;
         }
     }
 }
