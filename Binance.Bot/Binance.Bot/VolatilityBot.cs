@@ -21,7 +21,7 @@ namespace Binance.Bot
         private BotSetting _botSetting;
         private RollingStack<Trade> _stack;
         private decimal _currentPrice;
-        private DateTime _dontTradeTill;
+        private DateTime? _dontTradeTill;
         private object _lock = new object();
         private TradesService _tradesService;
         private Action _newTradeCallback;
@@ -78,7 +78,7 @@ namespace Binance.Bot
             
             _currentPrice = trade.Data.Price;
             var action = CheckpriceDifference(_currentPrice);
-            
+        
             if(action==TypeOfTrade.Buy)
             {
                 ExceCuteOrder(OrderSide.Buy);    
@@ -143,6 +143,8 @@ namespace Binance.Bot
         {
             if (_stack.LookUp(_botSetting.TimeSpan) == null)
                 return TypeOfTrade.None;
+            
+            _logger.LogTrace(_stack.GetStackString());
             
             var prevPrice = _stack.LookUp(_botSetting.TimeSpan).Price;
             var priceChange = ((price - prevPrice) / prevPrice) * 100;

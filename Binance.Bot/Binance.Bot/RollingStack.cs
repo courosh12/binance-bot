@@ -1,3 +1,5 @@
+using Binance.Bot.Data;
+
 namespace Binance.Bot
 {
     public class RollingStack<T>
@@ -9,6 +11,18 @@ namespace Binance.Bot
         {
             _size = size;
             _stack = new T[_size];
+        }
+
+        public string GetStackString()
+        {
+            string res="";
+            for (int i = 0; i< _size; i++)
+            {
+                var x = _stack[i] as Trade;
+                res += $" {x.Price}";
+            }
+
+            return res;
         }
 
         public void Push(T item)
@@ -35,7 +49,7 @@ namespace Binance.Bot
 
         public void SetHistoryTo(T item)
         {
-            for (int i = 0; i < _size-1; i++)
+            for (int i = 0; i < _size; i++)
             {
                 _stack[i] = item;
             }
