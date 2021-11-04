@@ -8,6 +8,7 @@ using CryptoExchange.Net;
 using CryptoExchange.Net.Sockets;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using SQLitePCL;
 using ILogger = Serilog.ILogger;
 
 namespace Binance.Bot
@@ -18,7 +19,7 @@ namespace Binance.Bot
         private BinanceClient _client;
         private  ILogger<VolatilityBot> _logger;
         private BotSetting _botSetting;
-        private RollingStack<IBinanceStreamKline> _stack;
+        private RollingStack<Trade> _stack;
         private decimal _currentPrice;
         private DateTime _dontTradeTill;
         private object _lock = new object();
@@ -33,7 +34,7 @@ namespace Binance.Bot
             _logger = logger;
             _botSetting = botSetting;
             _newTradeCallback = tradeCallback;
-            _stack = new RollingStack<IBinanceStreamKline>(_botSetting.TimeSpan);
+            _stack = new RollingStack<Trade>(_botSetting.TimeSpan);
             _tradesService = tradesService;
             _tradesService.BotSetting = _botSetting;
             _tradesService.SetId();
@@ -63,7 +64,7 @@ namespace Binance.Bot
             var actualData = data.Data.Data;
             if (actualData.Final)
             {
-                _stack.Push(actualData);
+                _stack.Push(new Trade(){Price = actualData.Close});
                 _logger.LogDebug($"{_botSetting.Symbol} close{actualData.Close.ToString()} time: {actualData.CloseTime} ");
             }
         }
@@ -112,8 +113,7 @@ namespace Binance.Bot
                         _tradesService.AddTrade(actualData.Price,decimal.Round(actualData.Quantity*actualData.Price,2),TypeOfTrade.Sell);
                     
                     _logger.LogInformation($"{(type == OrderSide.Buy?"Bought":"Sold")}: {actualData.Quantity} of {actualData.Symbol} at {actualData.Price} price");
-                    _dontTradeTill = DateTime.Now.AddMinutes(_botSetting.TimeSpan);
-                    _logger.LogInformation($"Cant trade till {_dontTradeTill}");
+                    _stack.SetHistoryTo(new Trade(){Price = actualData.Price});
                     _newTradeCallback();
                 }
                 else
@@ -144,7 +144,7 @@ namespace Binance.Bot
             if (_stack.LookUp(_botSetting.TimeSpan) == null)
                 return TypeOfTrade.None;
             
-            var prevPrice = _stack.LookUp(_botSetting.TimeSpan).Close;
+            var prevPrice = _stack.LookUp(_botSetting.TimeSpan).Price;
             var priceChange = ((price - prevPrice) / prevPrice) * 100;
             _logger.LogDebug($"Symbol: {_botSetting.Symbol} Price Change: {prevPrice} > {price} percentage: {priceChange}");
 

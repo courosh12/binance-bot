@@ -32,5 +32,13 @@ namespace Binance.Bot
             else
                 return _stack[steps-1];
         }
+
+        public void SetHistoryTo(T item)
+        {
+            for (int i = 0; i < _size-1; i++)
+            {
+                _stack[i] = item;
+            }
+        }
     }
 }
