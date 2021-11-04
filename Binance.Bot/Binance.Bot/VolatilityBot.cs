@@ -22,7 +22,6 @@ namespace Binance.Bot
         private RollingStack<Trade> _stack;
         private decimal _currentPrice;
         private DateTime? _dontTradeTill;
-        private object _lock = new object();
         private TradesService _tradesService;
         private Action _newTradeCallback;
 
@@ -91,39 +90,37 @@ namespace Binance.Bot
 
         private void ExceCuteOrder(OrderSide type)
         {
-            lock (_lock)
+            if (_dontTradeTill != null && _dontTradeTill > DateTime.Now)
             {
-                if (_dontTradeTill != null && _dontTradeTill > DateTime.Now)
-                {
-                    return;
-                }
+                return;
+            }
+            
+            var quantity = _botSetting.QuantityInDollar/_currentPrice;
+
+            var callResult = _client.Spot.Order.PlaceOrderAsync
+                (_botSetting.Symbol, type, OrderType.Market, quantity: quantity).GetAwaiter().GetResult();
+
+            if(callResult.Success)
+            {
+                var actualData=callResult.Data;
                 
-                var quantity = _botSetting.QuantityInDollar/_currentPrice;
-
-                var callResult = _client.Spot.Order.PlaceOrderAsync
-                    (_botSetting.Symbol, type, OrderType.Market, quantity: quantity).GetAwaiter().GetResult();
-
-                if(callResult.Success)
+                if(type == OrderSide.Buy)
+                    _tradesService.AddTrade(actualData.Price,decimal.Round(actualData.Quantity*actualData.Price,2),TypeOfTrade.Buy);
+                else if(type==OrderSide.Sell)
+                    _tradesService.AddTrade(actualData.Price,decimal.Round(actualData.Quantity*actualData.Price,2),TypeOfTrade.Sell);
+                
+                _logger.LogInformation($"{(type == OrderSide.Buy?"Bought":"Sold")}: {actualData.Quantity} of {actualData.Symbol} at {actualData.Price} price");
+                _stack.SetHistoryTo(new Trade(){Price = actualData.Price});
+                _dontTradeTill = DateTime.Now.AddMinutes(1);//failsafe
+                _newTradeCallback();
+            }
+            else
+            {
+                _logger.LogError(callResult.Error.ToString());
+                if (callResult.Error.Code == -2010)
                 {
-                    var actualData=callResult.Data;
-                    
-                    if(type == OrderSide.Buy)
-                        _tradesService.AddTrade(actualData.Price,decimal.Round(actualData.Quantity*actualData.Price,2),TypeOfTrade.Buy);
-                    else if(type==OrderSide.Sell)
-                        _tradesService.AddTrade(actualData.Price,decimal.Round(actualData.Quantity*actualData.Price,2),TypeOfTrade.Sell);
-                    
-                    _logger.LogInformation($"{(type == OrderSide.Buy?"Bought":"Sold")}: {actualData.Quantity} of {actualData.Symbol} at {actualData.Price} price");
-                    _stack.SetHistoryTo(new Trade(){Price = actualData.Price});
-                    _newTradeCallback();
-                }
-                else
-                {
-                    _logger.LogError(callResult.Error.ToString());
-                    if (callResult.Error.Code == -2010)
-                    {
-                        _dontTradeTill = DateTime.Now.AddMinutes(_botSetting.TimeSpan);
-                        _logger.LogInformation($"Cant trade till {_dontTradeTill}");
-                    }
+                    _dontTradeTill = DateTime.Now.AddMinutes(_botSetting.TimeSpan);
+                    _logger.LogInformation($"Cant trade till {_dontTradeTill}");
                 }
             }
         }
