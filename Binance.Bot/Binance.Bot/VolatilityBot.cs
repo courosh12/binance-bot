@@ -131,8 +131,8 @@ namespace Binance.Bot
             var sellRapport=_tradesService.GetTradeRapport(TypeOfTrade.Sell);;
             _logger.LogInformation(
                  $"Symbol: {_botSetting.Symbol}" +
-                        $" average buy: {buyRapport.AveragePrice} trades: {buyRapport.TotalTrades} amount: {buyRapport.SumQauntity} " +
-                        $" average sell: {sellRapport.AveragePrice} trades: {sellRapport.TotalTrades} amount: {sellRapport.SumQauntity} " +
+                        $" average buy: {decimal.Round(buyRapport.AveragePrice,10)} trades: {buyRapport.TotalTrades} amount: {buyRapport.SumQauntity} " +
+                        $" average sell: {decimal.Round(sellRapport.AveragePrice,10)} trades: {sellRapport.TotalTrades} amount: {sellRapport.SumQauntity} " +
                         $"diff: {decimal.Round(buyRapport.AveragePrice>0?(sellRapport.AveragePrice-buyRapport.AveragePrice)/buyRapport.AveragePrice*100:0,2)} ");
         }
 
