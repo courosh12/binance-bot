@@ -5,21 +5,17 @@ For each bot add separate setting in Botsettings:
 
     "BotSettings": [
         {  
-            "Symbol": "MATICBUSD",  //symbol
+            "Symbol": "BTCUSDT",  //symbol
             "TimeSpan": "15",  //Minutes to calculate change in price
-            "ChangeInPrice": "2",  //percentage change to trigger buy or sell
+            "ChangeInPriceUp": "2",  //percentage change to trigger sell
+            "ChangeInPriceDown": "2", //percentage change to trigger buy 
             "QuantityInDollar": "11"  //speaks for itself
       }, 
-      { 
-            "Symbol": "SCRTBUSD",  
-            "TimeSpan": "15",  
-            "ChangeInPrice": "2",  
-            "QuantityInDollar": "11"  
+        {  
+            "Symbol": "ETHUSDT",  //symbol
+            "TimeSpan": "15",  //Minutes to calculate change in price
+            "ChangeInPriceUp": "2",  //percentage change to trigger sell
+            "ChangeInPriceDown": "2", //percentage change to trigger buy 
+            "QuantityInDollar": "11"  //speaks for itself
       }, 
-      { 
-            "Symbol": "ATOMBUSD",  
-            "TimeSpan": "15",  
-            "ChangeInPrice": "2",  
-            "QuantityInDollar": "11"  
-      } 
     ]
