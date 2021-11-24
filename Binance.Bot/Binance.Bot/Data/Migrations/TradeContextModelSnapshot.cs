@@ -21,7 +21,10 @@ namespace Binance.Bot.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<decimal>("ChangeInPrice")
+                    b.Property<decimal>("ChangeInPriceDown")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ChangeInPriceUp")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Symbol")

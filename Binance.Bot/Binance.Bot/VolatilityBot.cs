@@ -38,7 +38,7 @@ namespace Binance.Bot
             _tradesService.BotSetting = _botSetting;
             _tradesService.SetId();
             _logger.LogInformation($"Starting: {this.GetType().Name} on Pair {_botSetting.Symbol} " +
-                                   $"setting: Timespan: {botSetting.TimeSpan} ChangeInPrice: {botSetting.ChangeInPrice}");
+                                   $"setting: Timespan: {botSetting.TimeSpan} ChangeInPriceUp: {botSetting.ChangeInPriceUp} ChangeInPriceDown: {botSetting.ChangeInPriceDown}");
         }
 
         public void SubscribeToData()
@@ -147,14 +147,15 @@ namespace Binance.Bot
             var priceChange = ((price - prevPrice) / prevPrice) * 100;
             _logger.LogDebug($"Symbol: {_botSetting.Symbol} Price Change: {prevPrice} > {price} percentage: {priceChange}");
 
-            if (Math.Abs(priceChange) > _botSetting.ChangeInPrice)
+            if (priceChange>0 && priceChange > _botSetting.ChangeInPriceUp)
             {
                 _logger.LogInformation($"Price Change: {prevPrice} > {price} percentage: {priceChange}");
-
-                if (priceChange > 0)
-                    return TypeOfTrade.Sell;
-                else
-                    return TypeOfTrade.Buy;
+                return TypeOfTrade.Sell;
+            }
+            if (priceChange<0 && Math.Abs(priceChange) > _botSetting.ChangeInPriceDown)
+            {
+                _logger.LogInformation($"Price Change: {prevPrice} > {price} percentage: {priceChange}");
+                return TypeOfTrade.Buy;
             }
 
             return TypeOfTrade.None;

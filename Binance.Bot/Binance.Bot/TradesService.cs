@@ -21,7 +21,8 @@ namespace Binance.Bot
             {
                 _botId=context.Bots.First(p =>
                     p.Symbol == BotSetting.Symbol && p.TimeSpan == BotSetting.TimeSpan &&
-                    p.ChangeInPrice == BotSetting.ChangeInPrice).Id;
+                    p.ChangeInPriceUp == BotSetting.ChangeInPriceUp &&
+                    p.ChangeInPriceDown==BotSetting.ChangeInPriceDown).Id;
             }
         }
         public TradeRapport GetTradeRapport(TypeOfTrade type)

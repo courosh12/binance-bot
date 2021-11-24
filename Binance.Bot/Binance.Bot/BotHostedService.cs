@@ -44,13 +44,15 @@ namespace Binance.Bot
                 foreach (var setting in settings)
                 {
                     if (!context.Bots
-                        .Any(p => p.Symbol == setting.Symbol && p.TimeSpan == setting.TimeSpan && p.ChangeInPrice == setting.ChangeInPrice))
+                        .Any(p => p.Symbol == setting.Symbol && p.TimeSpan == setting.TimeSpan && p.ChangeInPriceUp == setting.ChangeInPriceUp
+                                  && p.ChangeInPriceDown==setting.ChangeInPriceDown))
                     {
                         context.Bots.Add(new Data.Bot()
                         {
                             Symbol = setting.Symbol,
                             TimeSpan = setting.TimeSpan,
-                            ChangeInPrice = setting.ChangeInPrice
+                            ChangeInPriceUp = setting.ChangeInPriceUp,
+                            ChangeInPriceDown = setting.ChangeInPriceDown
                         });
                         context.SaveChanges();
                     }

@@ -4,7 +4,8 @@ namespace Binance.Bot
     {
         public string Symbol { get; set; }
         public int TimeSpan { get; set; }
-        public decimal ChangeInPrice { get; set; }
+        public decimal ChangeInPriceUp { get; set; }
+        public  decimal ChangeInPriceDown { get; set; }
         public  decimal QuantityInDollar { get; set; }
     }
 }
