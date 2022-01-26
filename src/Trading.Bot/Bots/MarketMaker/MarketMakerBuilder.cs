@@ -1,5 +1,6 @@
 ﻿using Binance.Net;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,7 @@ namespace Trading.Bot.Bots.MarketMaker
     {
         private MarketMaker _bot;
         private IServiceProvider _serviceProvider;
+
         public MarketMakerBuilder(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
@@ -22,18 +24,23 @@ namespace Trading.Bot.Bots.MarketMaker
 
         public void Reset()
         {
-            _bot = new MarketMaker();
+            _bot = new MarketMaker(_serviceProvider.GetService<ILogger<MarketMaker>>());
         }
 
         public void SetServerClient()
         {
-            _bot.TradingClient = new BinanceRestClient(_serviceProvider.GetService<BinanceClient>());
+            _bot.TradingClient = new BinanceRestClient(_serviceProvider.GetService<BinanceClient>(),
+                _serviceProvider.GetService<ILogger<BinanceRestClient>>());
         }
 
-        public void SetSettings(Dictionary<string,string> settings)
+        public void SetSettings(Dictionary<string, string> settings)
         {
-            var mmSetting = new MarketMakerSettings();
+            var mmSetting = new MarketMakerOptions();
             mmSetting.Symbol = settings["Symbol"];
+            mmSetting.Difference = decimal.Parse(settings["Difference"]);
+            mmSetting.Ordervalue = decimal.Parse(settings["OrderValue"]);
+            mmSetting.OrderAmount = int.Parse(settings["OrderAmount"]);
+
             _bot.Settings = mmSetting;
         }
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Trading.Bot
 {
-    public class BotSetting
+    public class BotOptions
     {
         public string Name { get; set; }
         public Dictionary<string,string> Setting { get; set; }

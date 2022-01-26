@@ -11,16 +11,21 @@ namespace Trading.Bot.Bots
     public class BotBuilderDirector
     {
         private ITradingBotBuilder _builder;
+        private IServiceProvider _serviceProvider;
+        public BotBuilderDirector(IServiceProvider serviceProvider)
+        {
+            _serviceProvider = serviceProvider;
+        }
 
         public void SetBuilder(string bot)
         {
             switch ((BotName)Enum.Parse(typeof(BotName), bot, true))
             {
                 case BotName.MARKET_MAKER:
-                    _builder = new MarketMakerBuilder();
+                    _builder = new MarketMakerBuilder(_serviceProvider);
                     break;
                 default:
-                    throw new Exception($"{nameof(bot)} is not implemented");
+                    throw new Exception($"{bot} is not implemented");
             }
         }
 

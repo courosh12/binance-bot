@@ -21,14 +21,15 @@ namespace Trading.Bot.Services
     public class BotHostedService : IHostedService
     {
         private ILogger<BotHostedService> _logger;
-        private List<BotSetting> _botsSettings;
+        private List<BotOptions> _botsSettings;
         private BotBuilderDirector _director;
         private List<ITradingBot> _bots = new List<ITradingBot>();
         private List<Task> _runningBots = new List<Task>();
         public BotHostedService(
             ILogger<BotHostedService> logger,
-            List<BotSetting> botsSettings,
+            List<BotOptions> botsSettings,
             BotBuilderDirector director
+
             )
         {
             _director = director;

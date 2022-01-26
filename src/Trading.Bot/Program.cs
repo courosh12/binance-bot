@@ -96,14 +96,14 @@ namespace Trading.Bot
 
         private static void AddBotConfiguration(IServiceCollection serviceCollection)
         {
-            var botsSettings = _configuration.GetSection("BotSettings").GetChildren().ToList()
-               .Select(p => new BotSetting()
+            var botsSettings = _configuration.GetSection("BotOptions").GetChildren().ToList()
+               .Select(p => new BotOptions()
                {
                    Name = p.GetSection("Name").Value,
                    Setting = p.GetSection("Setting").GetChildren().Select(p => new KeyValuePair<string, string>(p.Key, p.Value)).ToDictionary(p => p.Key, p => p.Value)
                }).ToList();
 
-            serviceCollection.AddSingleton<List<BotSetting>>(botsSettings);
+            serviceCollection.AddSingleton<List<BotOptions>>(botsSettings);
         }
 
 
