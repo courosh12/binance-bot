@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Trading.Bot.Enums;
 
 namespace Trading.Bot.Models
 {
@@ -11,7 +12,7 @@ namespace Trading.Bot.Models
         public decimal Price { get; set; }
         public decimal Quantity { get; set; }
         public string Symbol { get; set; }
-        public string OrderSide { get; set; }
+        public OrderSide OrderSide { get; set; }
 
     }
 }

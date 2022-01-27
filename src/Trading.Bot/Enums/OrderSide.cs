@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 
 namespace Trading.Bot.Enums
 {
-    public enum BotName
+    public enum OrderSide
     {
-        MARKET_MAKER
+        BUY,
+        SELL
     }
 }

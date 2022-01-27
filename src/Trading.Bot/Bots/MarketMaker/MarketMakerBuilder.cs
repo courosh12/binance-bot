@@ -40,6 +40,7 @@ namespace Trading.Bot.Bots.MarketMaker
             mmSetting.Difference = decimal.Parse(settings["Difference"]);
             mmSetting.Ordervalue = decimal.Parse(settings["OrderValue"]);
             mmSetting.OrderAmount = int.Parse(settings["OrderAmount"]);
+            mmSetting.Delay = int.Parse(settings["Delay"]);
 
             _bot.Settings = mmSetting;
         }

@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace Trading.Bot.Enums
 {
-    public enum BotName
+    public enum Exchange
     {
-        MARKET_MAKER
+        BINANCE
     }
 }

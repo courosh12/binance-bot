@@ -25,6 +25,7 @@ namespace Trading.Bot.Services
         private BotBuilderDirector _director;
         private List<ITradingBot> _bots = new List<ITradingBot>();
         private List<Task> _runningBots = new List<Task>();
+        private IDbContextFactory<TradeContext> _tradeDbContextFacotry;
         public BotHostedService(
             ILogger<BotHostedService> logger,
             List<BotOptions> botsSettings,
@@ -41,15 +42,15 @@ namespace Trading.Bot.Services
         {
 
             BuildBots();
-            StartBots();
+            StartBots(cancellationToken);
             return Task.WhenAll(_runningBots.ToArray());
         }
 
-        private void StartBots()
+        private void StartBots(CancellationToken token)
         {
             foreach (var bot in _bots)
             {
-                _runningBots.Add(bot.StartAsync());
+                _runningBots.Add(bot.StartAsync(token));
             }
         }
 

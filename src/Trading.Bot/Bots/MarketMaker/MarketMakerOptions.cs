@@ -12,5 +12,6 @@ namespace Trading.Bot.Bots.MarketMaker
         public decimal Difference { get; set; }
         public decimal Ordervalue { get; set; }
         public int OrderAmount { get; set; }
+        public int Delay { get; set; }
     }
 }

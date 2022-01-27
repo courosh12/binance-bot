@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Trading.Bot.Data;
 using Trading.Bot.Models;
 
 namespace Trading.Bot.ServerClients
@@ -11,6 +12,8 @@ namespace Trading.Bot.ServerClients
     {
         Task<decimal> GetHighestBidOrderAsync(string symbol);
         Task<decimal> GetLowestAskAsync(string symbol);
-        Task PlaceOrdersAsync(List<Order> orders);
+        Task<List<long>> PlaceOrdersAsync(List<Order> orders);
+        Task CancelAllOrdersAsync(string symbol);
+        Task<List<TradesEntity>> GetExecutedOrdersAsync(string symbol, List<long> ids);
     }
 }

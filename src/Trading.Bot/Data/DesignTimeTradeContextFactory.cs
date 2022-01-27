@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace Trading.Bot.Data
 {
-    public class DesignTimeTradeContextFactory:IDesignTimeDbContextFactory<TradeContext>
+    public class DesignTimeTradeContextFactory : IDesignTimeDbContextFactory<TradeContext>
     {
         public TradeContext CreateDbContext(string[] args)
         {

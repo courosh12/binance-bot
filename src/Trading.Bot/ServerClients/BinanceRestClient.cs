@@ -8,7 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Trading.Bot.Exceptions;
+using Trading.Bot.Data;
+using Trading.Bot.Enums;
 using Trading.Bot.Models;
 
 namespace Trading.Bot.ServerClients
@@ -39,33 +40,78 @@ namespace Trading.Bot.ServerClients
             return orderBookCall.Data.Asks.OrderBy(p => p.Price).First().Price;
         }
 
-        public async Task PlaceOrdersAsync(List<Order> orders)
+        public async Task<List<long>> PlaceOrdersAsync(List<Order> orders)
         {
-
+            var placedOrders = new List<long>();
             foreach (var order in orders)
             {
                 var orderResultCall = await _client.Spot.Order.PlaceOrderAsync(
                     order.Symbol,
-                    order.OrderSide == "buy" ? OrderSide.Buy : order.OrderSide == "sell" ? OrderSide.Sell : throw new Exception("ordertype not supported"),
+                    order.OrderSide == Enums.OrderSide.BUY ? Binance.Net.Enums.OrderSide.Buy :
+                        order.OrderSide == Enums.OrderSide.SELL ? Binance.Net.Enums.OrderSide.Sell :
+                            throw new Exception("ordertype not supported"),
                     OrderType.Limit,
                     quantity: order.Quantity,
                     price: order.Price,
                     timeInForce: TimeInForce.GoodTillCancel);
 
-                ValidateResult(orderResultCall, order);
+                if (ValidateResult(orderResultCall, order))
+                {
+                    placedOrders.Add(orderResultCall.Data.OrderId);
+                }
+
+                _logger.LogInformation($"Order placed: {order.OrderSide} {order.Symbol} {order.Quantity} {order.Price}");
             }
+
+            return placedOrders;
         }
 
-        public void ValidateResult<T>(WebCallResult<T> result, object argument = null)
+        public async Task CancelAllOrdersAsync(string symbol)
+        {
+            var callResult = await _client.Spot.Order.CancelAllOpenOrdersAsync(symbol);
+            ValidateResult(callResult, symbol);
+        }
+        public async Task<List<TradesEntity>> GetExecutedOrdersAsync(string symbol, List<long> ids)
+        {
+            var trades = new List<TradesEntity>();
+
+            foreach (var id in ids)
+            {
+                var order = await _client.Spot.Order.GetOrderAsync(symbol, id);
+                ValidateResult(order);
+
+                if (order.Data.Status == OrderStatus.Filled) //skip partially filled for now
+                {
+                    trades.Add(new TradesEntity()
+                    {
+                        OrderType = order.Data.Side == Binance.Net.Enums.OrderSide.Buy ? Bot.Enums.OrderSide.BUY : Bot.Enums.OrderSide.SELL,
+                        Price = order.Data.Price,
+                        Quantity = order.Data.Quantity,
+                        ExecutionTime = order.Data.UpdateTime.Value
+                    }); ;
+                }
+            }
+
+            return trades;
+        }
+
+        private bool ValidateResult<T>(WebCallResult<T> result, object argument = null)
         {
             if (result.Success)
             {
-                return;
+                return true;
             }
             else if (result.Error.Code == -2010)
             {
                 var order = argument as Order;
                 _logger.LogError($"Not enough balance to {order.OrderSide} {order.Symbol}");
+                return false;
+            }
+            else if (result.Error.Code == -2011)
+            {
+                var symbol = argument as string;
+                _logger.LogError($"No orders to cancel for {symbol}");
+                return false;
             }
             else
             {
