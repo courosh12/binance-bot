@@ -1,4 +1,5 @@
 ﻿using Binance.Net;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -7,15 +8,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Trading.Bot.Bots;
+using Trading.Bot.Data;
+using Trading.Bot.Enums;
+using Trading.Bot.Repositories;
 using Trading.Bot.ServerClients;
 
 namespace Trading.Bot.Bots.MarketMaker
 {
     public class MarketMakerBuilder : ITradingBotBuilder
     {
-        private MarketMaker _bot;
+        private ITradingBot<MarketMakerOptions> _bot;
         private IServiceProvider _serviceProvider;
-
         public MarketMakerBuilder(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
@@ -24,7 +27,8 @@ namespace Trading.Bot.Bots.MarketMaker
 
         public void Reset()
         {
-            _bot = new MarketMaker(_serviceProvider.GetService<ILogger<MarketMaker>>());
+            _bot = new MarketMaker(_serviceProvider.GetService<ILogger<MarketMaker>>(),
+                _serviceProvider.GetService<TradeHistoryRepository>());
         }
 
         public void SetServerClient()
@@ -33,16 +37,16 @@ namespace Trading.Bot.Bots.MarketMaker
                 _serviceProvider.GetService<ILogger<BinanceRestClient>>());
         }
 
-        public void SetSettings(Dictionary<string, string> settings)
+        public void SetBotOptions(Dictionary<string, string> settings)
         {
-            var mmSetting = new MarketMakerOptions();
-            mmSetting.Symbol = settings["Symbol"];
-            mmSetting.Difference = decimal.Parse(settings["Difference"]);
-            mmSetting.Ordervalue = decimal.Parse(settings["OrderValue"]);
-            mmSetting.OrderAmount = int.Parse(settings["OrderAmount"]);
-            mmSetting.Delay = int.Parse(settings["Delay"]);
+            var mmOptions = new MarketMakerOptions();
+            mmOptions.Symbol = settings["Symbol"];
+            mmOptions.Spread = decimal.Parse(settings["Spread"]);
+            mmOptions.Ordervalue = decimal.Parse(settings["OrderValue"]);
+            mmOptions.OrderQuantity = int.Parse(settings["OrderQuantity"]);
+            mmOptions.Interval = int.Parse(settings["Interval"]);
 
-            _bot.Settings = mmSetting;
+            _bot.BotOptions = mmOptions;
         }
 
         public ITradingBot GetBot()

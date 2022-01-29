@@ -11,7 +11,7 @@ namespace Trading.Bot.Bots
     {
         void Reset();
         void SetServerClient();
-        void SetSettings(Dictionary<string,string> setting);
+        void SetBotOptions(Dictionary<string, string> setting);
         ITradingBot GetBot();
     }
 }

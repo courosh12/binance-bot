@@ -29,10 +29,10 @@ namespace Trading.Bot.Bots
             }
         }
 
-        public ITradingBot Build(Dictionary<string,string> setting)
+        public ITradingBot Build(Dictionary<string, string> options)
         {
             _builder.SetServerClient();
-            _builder.SetSettings(setting);
+            _builder.SetBotOptions(options);
             return _builder.GetBot();
         }
     }

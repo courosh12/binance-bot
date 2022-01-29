@@ -18,16 +18,17 @@ using Serilog.Extensions.Logging;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Trading.Bot.Bots;
+using Trading.Bot.Repositories;
 
 namespace Trading.Bot
 {
-    
+
     class Program
     {
         private static IConfiguration _configuration;
         static async Task Main(string[] args)
         {
-            _configuration =  new ConfigurationBuilder()
+            _configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json")
                 .AddEnvironmentVariables()
@@ -76,6 +77,7 @@ namespace Trading.Bot
                 options.UseSqlite(_configuration.GetConnectionString("DefaultConnection"));
             });
 
+            serviceCollection.AddTransient<TradeHistoryRepository>();
             AddBotConfiguration(serviceCollection);
             serviceCollection.AddTransient<BotBuilderDirector>();
             serviceCollection.AddHostedService<BotHostedService>();

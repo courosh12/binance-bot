@@ -10,6 +10,7 @@ namespace Trading.Bot.Data
         public decimal Quantity { get; set; }
         public OrderSide OrderType { get; set; }
         public DateTime ExecutionTime { get; set; }
-        public Bot Bot { get; set; }
+        public int BotId { get; set; }
+        public BotEntity Bot { get; set; }
     }
 }

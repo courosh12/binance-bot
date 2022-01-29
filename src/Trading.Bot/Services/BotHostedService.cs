@@ -29,21 +29,28 @@ namespace Trading.Bot.Services
         public BotHostedService(
             ILogger<BotHostedService> logger,
             List<BotOptions> botsSettings,
-            BotBuilderDirector director
-
+            BotBuilderDirector director,
+            IDbContextFactory<TradeContext> factory
             )
         {
             _director = director;
             _botsSettings = botsSettings;
             _logger = logger;
+            _tradeDbContextFacotry = factory;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-
+            MigrateDataBase();
             BuildBots();
             StartBots(cancellationToken);
             return Task.WhenAll(_runningBots.ToArray());
+        }
+
+        private void MigrateDataBase()
+        {
+            using var context = _tradeDbContextFacotry.CreateDbContext();
+            context.Database.Migrate();
         }
 
         private void StartBots(CancellationToken token)
