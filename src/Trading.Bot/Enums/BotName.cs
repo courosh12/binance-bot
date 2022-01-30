@@ -8,6 +8,7 @@ namespace Trading.Bot.Enums
 {
     public enum BotName
     {
-        MARKET_MAKER
+        MARKET_MAKER,
+        PORTOFOLIO_BALANCER
     }
 }

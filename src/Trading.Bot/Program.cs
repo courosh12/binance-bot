@@ -102,7 +102,8 @@ namespace Trading.Bot
                .Select(p => new BotOptions()
                {
                    Name = p.GetSection("Name").Value,
-                   Setting = p.GetSection("Setting").GetChildren().Select(p => new KeyValuePair<string, string>(p.Key, p.Value)).ToDictionary(p => p.Key, p => p.Value)
+                   Setting = p.GetSection("Setting").GetChildren()
+                   .Select(p => new KeyValuePair<string, string>(p.Key, p.Value)).ToDictionary(p => p.Key, p => p.Value)
                }).ToList();
 
             serviceCollection.AddSingleton<List<BotOptions>>(botsSettings);

@@ -13,55 +13,33 @@ using Trading.Bot.ServerClients;
 
 namespace Trading.Bot.Bots.MarketMaker
 {
-    public class MarketMaker : ITradingBot<MarketMakerOptions>
+    public class MarketMaker : TradingBotBase<MarketMaker, MarketMakerOptions>
     {
-        public ITradingClient TradingClient { get; set; }
-        public MarketMakerOptions BotOptions { get; set; }
-
-        private string _botIdentifier;
-        private BotName _botName = BotName.MARKET_MAKER;
-        private TradeHistoryRepository _tradeHistoryRepository;
-        private readonly ILogger _logger;
         private decimal _lowestAsk;
         private decimal _highestBid;
-        private const int DECIMALS = 8;
+        private List<long> _placedOrderIds;
 
         public MarketMaker(ILogger<MarketMaker> logger, TradeHistoryRepository tradeHistoryRepository)
+            : base(logger, tradeHistoryRepository, BotName.MARKET_MAKER)
         {
-            _tradeHistoryRepository = tradeHistoryRepository;
-            _logger = logger;
         }
 
-        public async Task StartAsync(CancellationToken cancelToken)
+        protected override void SetBotIdentifier()
         {
-            _logger.LogInformation($"Starting bot: {_botIdentifier}");
-
-            _botIdentifier = $"{_botName}.{BotOptions.Exchange}.{BotOptions.Symbol}.{BotOptions.Spread}.{BotOptions.Interval}." +
+            BotIdentifier = $"{Botname}.{BotOptions.Exchange}.{BotOptions.Symbol}.{BotOptions.Spread}.{BotOptions.Interval}." +
                 $"{BotOptions.OrderQuantity}.{BotOptions.Ordervalue}";
-
-            AddBotToDb();
-
-            List<long> placedOrderIds = null;
-            while (!cancelToken.IsCancellationRequested)
-            {
-                try
-                {
-                    await GetPricesAsync();
-                    await CancelOpenOrdersAsync();
-                    await UpdateOrderHistory(placedOrderIds);
-                    var orders = CreateNewOrders();
-                    placedOrderIds = await ExecuteOrdersAsync(orders);
-                    await Task.Delay(1000 * 60 * BotOptions.Interval, cancelToken);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"Something went wrong for {_botIdentifier + Environment.NewLine + ex.Message} ");
-                }
-            }
-
-            await CancelOpenOrdersAsync();
-            _logger.LogInformation($"Exiting bot: {_botIdentifier}");
         }
+
+        protected override async Task ExecuteBotStepsAsync(CancellationToken cancelToken)
+        {
+            await GetPricesAsync();
+            await CancelOpenOrdersAsync();
+            await UpdateOrderHistory(_placedOrderIds);
+            var orders = CreateNewOrders();
+            _placedOrderIds = await ExecuteOrdersAsync(orders);
+            await Task.Delay(1000 * 60 * BotOptions.Interval, cancelToken);
+        }
+
 
         private async Task GetPricesAsync()
         {
@@ -80,20 +58,9 @@ namespace Trading.Bot.Bots.MarketMaker
                 return;
 
             var trades = await TradingClient.GetExecutedOrdersAsync(BotOptions.Symbol, placedOrderIds);
-            trades = new List<TradesEntity>()
-            {
-                new TradesEntity()
-                {
-                    ExecutionTime = DateTime.Now,
-                    OrderType=OrderSide.SELL,
-                    Price=2m,
-                    Quantity=1,
-
-                }
-            };
 
             if (trades.Any())
-                _tradeHistoryRepository.UpdateTrades(trades, _botIdentifier);
+                TradeHistoryRepository.UpdateTrades(trades, BotIdentifier);
         }
 
         private List<Order> CreateNewOrders()
@@ -129,14 +96,9 @@ namespace Trading.Bot.Bots.MarketMaker
             return TradingClient.PlaceOrdersAsync(orders);
         }
 
-        private void AddBotToDb()
+        protected override async Task ExitingBotAsync()
         {
-            var bot = new BotEntity()
-            {
-                BotIdentifier = _botIdentifier,
-            };
-
-            _tradeHistoryRepository.AddBotToDb(bot);
+            await CancelOpenOrdersAsync();
         }
     }
 }
