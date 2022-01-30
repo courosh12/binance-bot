@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Trading.Bot.Data;
 using Trading.Bot.Enums;
+using Trading.Bot.Models;
 using Trading.Bot.Repositories;
 using Trading.Bot.ServerClients;
 
@@ -34,7 +35,7 @@ namespace Trading.Bot.Bots
         {
             try
             {
-                SetBotIdentifier();
+                StartingUpBot();
                 Logger.LogInformation($"Starting bot: {BotIdentifier}");
                 AddBotToDb();
             }
@@ -63,6 +64,17 @@ namespace Trading.Bot.Bots
             Logger.LogInformation($"Exiting bot: {BotIdentifier}");
         }
 
+        protected async Task UpdateOrderHistory(List<Order> placedOrders)
+        {
+            if (placedOrders == null || !placedOrders.Any())
+                return;
+
+            var trades = await TradingClient.GetExecutedOrdersAsync(placedOrders);
+
+            if (trades.Any())
+                TradeHistoryRepository.UpdateTrades(trades, BotIdentifier);
+        }
+
         private void AddBotToDb()
         {
             var bot = new BotEntity()
@@ -72,7 +84,7 @@ namespace Trading.Bot.Bots
             TradeHistoryRepository.AddBotToDb(bot);
         }
 
-        protected abstract void SetBotIdentifier();
+        protected abstract void StartingUpBot();
         protected abstract Task ExecuteBotStepsAsync(CancellationToken canceltToken);
         protected abstract Task ExitingBotAsync();
     }

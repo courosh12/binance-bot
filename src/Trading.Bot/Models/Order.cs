@@ -13,6 +13,7 @@ namespace Trading.Bot.Models
         public decimal Quantity { get; set; }
         public string Symbol { get; set; }
         public OrderSide OrderSide { get; set; }
+        public long OrderId { get; set; }
 
     }
 }

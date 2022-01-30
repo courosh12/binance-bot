@@ -40,9 +40,19 @@ namespace Trading.Bot.ServerClients
             return orderBookCall.Data.Asks.OrderBy(p => p.Price).First().Price;
         }
 
-        public async Task<List<long>> PlaceOrdersAsync(List<Order> orders)
+        public Task<List<Order>> PlaceMarketOrdersAsync(List<Order> orders)
         {
-            var placedOrders = new List<long>();
+            return PlaceOrdersAsync(orders, OrderType.Market);
+        }
+
+        public Task<List<Order>> PlaceLimitOrdersAsync(List<Order> orders)
+        {
+            return PlaceOrdersAsync(orders, OrderType.Limit);
+        }
+
+        private async Task<List<Order>> PlaceOrdersAsync(List<Order> orders, OrderType orderType)
+        {
+            var placedOrders = new List<Order>();
             foreach (var order in orders)
             {
                 var orderResultCall = await _client.Spot.Order.PlaceOrderAsync(
@@ -50,17 +60,18 @@ namespace Trading.Bot.ServerClients
                     order.OrderSide == Enums.OrderSide.BUY ? Binance.Net.Enums.OrderSide.Buy :
                         order.OrderSide == Enums.OrderSide.SELL ? Binance.Net.Enums.OrderSide.Sell :
                             throw new Exception("ordertype not supported"),
-                    OrderType.Limit,
+                    orderType,
                     quantity: order.Quantity,
-                    price: order.Price,
-                    timeInForce: TimeInForce.GoodTillCancel);
+                    price: orderType == OrderType.Limit ? order.Price:null,
+                    timeInForce: orderType == OrderType.Limit ? TimeInForce.GoodTillCancel : null);
 
                 if (ValidateResult(orderResultCall, order))
                 {
-                    placedOrders.Add(orderResultCall.Data.OrderId);
+                    order.OrderId = orderResultCall.Data.OrderId;
+                    placedOrders.Add(order);
                 }
 
-                _logger.LogInformation($"Order placed: {order.OrderSide} {order.Symbol} {order.Quantity} {order.Price}");
+                _logger.LogInformation($"Order placed: {order.OrderSide} {order.Symbol} {orderType} {order.Quantity} {order.Price}");
             }
 
             return placedOrders;
@@ -72,13 +83,13 @@ namespace Trading.Bot.ServerClients
             ValidateResult(callResult, symbol);
         }
 
-        public async Task<List<TradesEntity>> GetExecutedOrdersAsync(string symbol, List<long> ids)
+        public async Task<List<TradesEntity>> GetExecutedOrdersAsync(List<Order> orders)
         {
             var trades = new List<TradesEntity>();
 
-            foreach (var id in ids)
+            foreach (var orderToGet in orders)
             {
-                var order = await _client.Spot.Order.GetOrderAsync(symbol, id);
+                var order = await _client.Spot.Order.GetOrderAsync(orderToGet.Symbol, orderToGet.OrderId);
                 ValidateResult(order);
 
                 if (order.Data.Status == OrderStatus.Filled) //skip partially filled for now
@@ -88,7 +99,7 @@ namespace Trading.Bot.ServerClients
                         OrderType = order.Data.Side == Binance.Net.Enums.OrderSide.Buy ? Bot.Enums.OrderSide.BUY : Bot.Enums.OrderSide.SELL,
                         Price = order.Data.Price,
                         Quantity = order.Data.Quantity,
-                        ExecutionTime = order.Data.UpdateTime.Value
+                        ExecutionTime = order.Data.UpdateTime.HasValue ? order.Data.UpdateTime.Value : order.Data.CreateTime
                     }); ;
                 }
             }

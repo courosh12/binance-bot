@@ -11,6 +11,9 @@ namespace Trading.Bot.Models
         public string Name { get; set; }
         public decimal Value { get; set; }
         public decimal Price { get; set; }
-        public decimal PercantageOfPortofolio { get; set; }
+        public decimal PercentageOfPortofolio { get; set; }
+        public decimal TargetPercentageOfPortofolio { get; set; }
+
+        public decimal DifferenceInTargetAndCurrent => TargetPercentageOfPortofolio - PercentageOfPortofolio;
     }
 }

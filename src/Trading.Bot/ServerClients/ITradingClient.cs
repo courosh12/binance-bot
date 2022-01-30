@@ -12,9 +12,10 @@ namespace Trading.Bot.ServerClients
     {
         Task<decimal> GetHighestBidOrderAsync(string symbol);
         Task<decimal> GetLowestAskAsync(string symbol);
-        Task<List<long>> PlaceOrdersAsync(List<Order> orders);
+        Task<List<Order>> PlaceLimitOrdersAsync(List<Order> orders);
+        Task<List<Order>> PlaceMarketOrdersAsync(List<Order> orders);
         Task CancelAllOrdersAsync(string symbol);
         Task<List<AssetBalance>> GetAllBalances();
-        Task<List<TradesEntity>> GetExecutedOrdersAsync(string symbol, List<long> ids);
+        Task<List<TradesEntity>> GetExecutedOrdersAsync(List<Order> orders);
     }
 }

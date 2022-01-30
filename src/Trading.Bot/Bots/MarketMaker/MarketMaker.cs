@@ -17,14 +17,14 @@ namespace Trading.Bot.Bots.MarketMaker
     {
         private decimal _lowestAsk;
         private decimal _highestBid;
-        private List<long> _placedOrderIds;
+        private List<Order> _placedOrders;
 
         public MarketMaker(ILogger<MarketMaker> logger, TradeHistoryRepository tradeHistoryRepository)
             : base(logger, tradeHistoryRepository, BotName.MARKET_MAKER)
         {
         }
 
-        protected override void SetBotIdentifier()
+        protected override void StartingUpBot()
         {
             BotIdentifier = $"{Botname}.{BotOptions.Exchange}.{BotOptions.Symbol}.{BotOptions.Spread}.{BotOptions.Interval}." +
                 $"{BotOptions.OrderQuantity}.{BotOptions.Ordervalue}";
@@ -34,9 +34,10 @@ namespace Trading.Bot.Bots.MarketMaker
         {
             await GetPricesAsync();
             await CancelOpenOrdersAsync();
-            await UpdateOrderHistory(_placedOrderIds);
+            await UpdateOrderHistory(_placedOrders);
             var orders = CreateNewOrders();
-            _placedOrderIds = await ExecuteOrdersAsync(orders);
+            _placedOrders = await TradingClient.PlaceLimitOrdersAsync(orders);
+
             await Task.Delay(1000 * 60 * BotOptions.Interval, cancelToken);
         }
 
@@ -50,17 +51,6 @@ namespace Trading.Bot.Bots.MarketMaker
         private Task CancelOpenOrdersAsync()
         {
             return TradingClient.CancelAllOrdersAsync(BotOptions.Symbol);
-        }
-
-        private async Task UpdateOrderHistory(List<long> placedOrderIds)
-        {
-            if (placedOrderIds == null || !placedOrderIds.Any())
-                return;
-
-            var trades = await TradingClient.GetExecutedOrdersAsync(BotOptions.Symbol, placedOrderIds);
-
-            if (trades.Any())
-                TradeHistoryRepository.UpdateTrades(trades, BotIdentifier);
         }
 
         private List<Order> CreateNewOrders()
@@ -89,11 +79,6 @@ namespace Trading.Bot.Bots.MarketMaker
             }
 
             return orders;
-        }
-
-        private Task<List<long>> ExecuteOrdersAsync(List<Order> orders)
-        {
-            return TradingClient.PlaceOrdersAsync(orders);
         }
 
         protected override async Task ExitingBotAsync()
