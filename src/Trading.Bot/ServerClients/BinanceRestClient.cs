@@ -71,6 +71,7 @@ namespace Trading.Bot.ServerClients
             var callResult = await _client.Spot.Order.CancelAllOpenOrdersAsync(symbol);
             ValidateResult(callResult, symbol);
         }
+
         public async Task<List<TradesEntity>> GetExecutedOrdersAsync(string symbol, List<long> ids)
         {
             var trades = new List<TradesEntity>();
@@ -93,6 +94,13 @@ namespace Trading.Bot.ServerClients
             }
 
             return trades;
+        }
+
+        public async Task<List<AssetBalance>> GetAllBalances()
+        {
+            var accountResult = await _client.General.GetAccountInfoAsync();
+            ValidateResult(accountResult);
+            return accountResult.Data.Balances.Select(p => new AssetBalance() { Name = p.Asset, Value = p.Free }).ToList();
         }
 
         private bool ValidateResult<T>(WebCallResult<T> result, object argument = null)

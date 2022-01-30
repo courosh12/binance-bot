@@ -14,6 +14,7 @@ namespace Trading.Bot.ServerClients
         Task<decimal> GetLowestAskAsync(string symbol);
         Task<List<long>> PlaceOrdersAsync(List<Order> orders);
         Task CancelAllOrdersAsync(string symbol);
+        Task<List<AssetBalance>> GetAllBalances();
         Task<List<TradesEntity>> GetExecutedOrdersAsync(string symbol, List<long> ids);
     }
 }
