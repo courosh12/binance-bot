@@ -1,0 +1,12 @@
+version: '3'
+services:
+  tradingbot:
+    build:
+      context: ./src
+      dockerfile: ./Trading.Bot/Dockerfile
+    environment:
+      - "ApiKeys__Key=${ApiKeys__Key}"
+      - "ApiKeys__Secret=${ApiKeys__Secret}"
+    volumes:
+      - /bot/logs
+      - /bot/db
