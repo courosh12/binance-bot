@@ -32,7 +32,7 @@ namespace Trading.Bot.Bots.PrtofolioBalancer
                 throw new Exception("Sum of percanteges for Allocation must be 100");
         }
 
-        protected override async Task ExecuteBotStepsAsync(CancellationToken canceltToken)
+        protected override async Task ExecuteBotStepsAsync(CancellationToken cancelToken)
         {
             var balance = await GetCurrentBalancesAsync();
             var rapport = await CalculateCurrentBalanceDistributionAsync(balance);
@@ -41,6 +41,7 @@ namespace Trading.Bot.Bots.PrtofolioBalancer
             await UpdateOrderHistory(placedOrders);
             balance = await GetCurrentBalancesAsync();
             rapport = await CalculateCurrentBalanceDistributionAsync(balance);
+            await Task.Delay(1000 * 60 * BotOptions.Interval, cancelToken);
         }
 
         private List<Order> GetRebalanceOrders(PortofolioDistribuitonRapport rapport)
@@ -59,7 +60,7 @@ namespace Trading.Bot.Bots.PrtofolioBalancer
                 }
             }
 
-            var message = $"Assets in surplus: {Environment.NewLine}";
+            var message = $"{Environment.NewLine}Assets in surplus: {Environment.NewLine}";
             assetsInSurplus.ForEach(asset => message += $"Name: {asset.Name} Percentage: {Math.Abs(asset.DifferenceInTargetAndCurrent)}" + Environment.NewLine);
             message += $"Assets in deficit: {Environment.NewLine}";
             assetsInDeficit.ForEach(asset => message += $"Name: {asset.Name} Percentage: {asset.DifferenceInTargetAndCurrent}" + Environment.NewLine);
