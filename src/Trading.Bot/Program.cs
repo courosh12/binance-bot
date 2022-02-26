@@ -19,6 +19,7 @@ using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Trading.Bot.Bots;
 using Trading.Bot.Repositories;
+using Binance.Net.Clients;
 
 namespace Trading.Bot
 {
@@ -88,8 +89,11 @@ namespace Trading.Bot
             var settings = _configuration.GetSection("ApiKeys");
             var client = new BinanceClient(new BinanceClientOptions()
             {
-                AutoTimestamp = true,
-                TradeRulesBehaviour = TradeRulesBehaviour.AutoComply,
+                SpotApiOptions = new BinanceApiClientOptions()
+                {
+                    AutoTimestamp = true,
+                    TradeRulesBehaviour = TradeRulesBehaviour.AutoComply,
+                },
                 LogWriters = new List<ILogger> { new SerilogLoggerFactory(Log.Logger).CreateLogger<Program>() },
                 ApiCredentials = new ApiCredentials(settings.GetSection("Key").Value, settings.GetSection("Secret").Value)
             });
