@@ -1,6 +1,6 @@
 ﻿using Binance.Net;
+using Binance.Net.Clients;
 using Binance.Net.Enums;
-using Binance.Net.Objects.Spot.SpotData;
 using CryptoExchange.Net.Objects;
 using Microsoft.Extensions.Logging;
 using System;
@@ -9,7 +9,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Trading.Bot.Data;
-using Trading.Bot.Enums;
 using Trading.Bot.Models;
 
 namespace Trading.Bot.ServerClients
@@ -28,46 +27,46 @@ namespace Trading.Bot.ServerClients
 
         public async Task<decimal> GetHighestBidOrderAsync(string symbol)
         {
-            var orderBookCall = await _client.Spot.Market.GetOrderBookAsync(symbol, 5);
+            var orderBookCall = await _client.SpotApi.ExchangeData.GetOrderBookAsync(symbol, 5);
             ValidateResult(orderBookCall);
             return orderBookCall.Data.Bids.OrderByDescending(p => p.Price).First().Price;
         }
 
         public async Task<decimal> GetLowestAskAsync(string symbol)
         {
-            var orderBookCall = await _client.Spot.Market.GetOrderBookAsync(symbol, 5);
+            var orderBookCall = await _client.SpotApi.ExchangeData.GetOrderBookAsync(symbol, 5);
             ValidateResult(orderBookCall);
             return orderBookCall.Data.Asks.OrderBy(p => p.Price).First().Price;
         }
 
         public Task<List<Order>> PlaceMarketOrdersAsync(List<Order> orders)
         {
-            return PlaceOrdersAsync(orders, OrderType.Market);
+            return PlaceOrdersAsync(orders, SpotOrderType.Market);
         }
 
         public Task<List<Order>> PlaceLimitOrdersAsync(List<Order> orders)
         {
-            return PlaceOrdersAsync(orders, OrderType.Limit);
+            return PlaceOrdersAsync(orders, SpotOrderType.Limit);
         }
 
-        private async Task<List<Order>> PlaceOrdersAsync(List<Order> orders, OrderType orderType)
+        private async Task<List<Order>> PlaceOrdersAsync(List<Order> orders, SpotOrderType orderType)
         {
             var placedOrders = new List<Order>();
             foreach (var order in orders)
             {
-                var orderResultCall = await _client.Spot.Order.PlaceOrderAsync(
+                var orderResultCall = await _client.SpotApi.Trading.PlaceOrderAsync(
                     order.Symbol,
                     order.OrderSide == Enums.OrderSide.BUY ? Binance.Net.Enums.OrderSide.Buy :
                         order.OrderSide == Enums.OrderSide.SELL ? Binance.Net.Enums.OrderSide.Sell :
                             throw new Exception("ordertype not supported"),
                     orderType,
                     quantity: order.Quantity,
-                    price: orderType == OrderType.Limit ? order.Price:null,
-                    timeInForce: orderType == OrderType.Limit ? TimeInForce.GoodTillCancel : null);
+                    price: orderType == SpotOrderType.Limit ? order.Price : null,
+                    timeInForce: orderType == SpotOrderType.Limit ? TimeInForce.GoodTillCanceled : null);
 
                 if (ValidateResult(orderResultCall, order))
                 {
-                    order.OrderId = orderResultCall.Data.OrderId;
+                    order.OrderId = orderResultCall.Data.Id;
                     placedOrders.Add(order);
                 }
 
@@ -79,7 +78,7 @@ namespace Trading.Bot.ServerClients
 
         public async Task CancelAllOrdersAsync(string symbol)
         {
-            var callResult = await _client.Spot.Order.CancelAllOpenOrdersAsync(symbol);
+            var callResult = await _client.SpotApi.Trading.CancelAllOrdersAsync(symbol);
             ValidateResult(callResult, symbol);
         }
 
@@ -89,7 +88,7 @@ namespace Trading.Bot.ServerClients
 
             foreach (var orderToGet in orders)
             {
-                var order = await _client.Spot.Order.GetOrderAsync(orderToGet.Symbol, orderToGet.OrderId);
+                var order = await _client.SpotApi.Trading.GetOrderAsync(orderToGet.Symbol, orderToGet.OrderId);
                 ValidateResult(order);
 
                 if (order.Data.Status == OrderStatus.Filled) //skip partially filled for now
@@ -109,9 +108,9 @@ namespace Trading.Bot.ServerClients
 
         public async Task<List<AssetBalance>> GetAllBalances()
         {
-            var accountResult = await _client.General.GetAccountInfoAsync();
+            var accountResult = await _client.SpotApi.Account.GetAccountInfoAsync();
             ValidateResult(accountResult);
-            return accountResult.Data.Balances.Select(p => new AssetBalance() { Name = p.Asset, Value = p.Free }).ToList();
+            return accountResult.Data.Balances.Select(p => new AssetBalance() { Name = p.Asset, Value = p.Available }).ToList();
         }
 
         private bool ValidateResult<T>(WebCallResult<T> result, object argument = null)
